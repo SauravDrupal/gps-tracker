@@ -700,10 +700,10 @@ input:focus-visible {
 }
 
 .google-map {
-  position: absolute;
-  inset: 0;
+  position: relative;
   width: 100%;
   height: 100%;
+  min-height: 250px;
 }
 
 .map-message {
@@ -1455,6 +1455,10 @@ input:focus-visible {
     height: 300px;
   }
 
+  .google-map {
+    min-height: 300px;
+  }
+
   .vehicles-panel {
     min-height: 370px;
   }
@@ -1687,6 +1691,10 @@ input:focus-visible {
 
   .map-canvas {
     height: 255px;
+  }
+
+  .google-map {
+    min-height: 255px;
   }
 
   .map-footer {

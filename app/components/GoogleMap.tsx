@@ -73,8 +73,6 @@ type GoogleMapsApi = {
   importLibrary<K extends keyof GoogleMapsLibraries>(
     name: K,
   ): Promise<GoogleMapsLibraries[K]>;
-  Map: GoogleMapsLibraries["maps"]["Map"];
-  marker?: GoogleMapsLibraries["marker"];
   LatLngBounds: new () => GoogleMapBounds;
   Polyline: new (options: {
     path: GoogleMapPoint[];
@@ -99,7 +97,7 @@ function loadGoogleMapsApi(apiKey: string): Promise<GoogleMapsApi> {
   if (existingMaps?.importLibrary) {
     return Promise.resolve(existingMaps);
   }
-  if (existingMaps?.Map) {
+  if (existingMaps?.LatLngBounds) {
     return Promise.reject(
       new Error(
         "A previous Google Maps script is already loaded. Fully reload the page to use the updated loader.",
@@ -233,14 +231,7 @@ export default function GoogleMap({
       setMapError("Google Maps loaded, but its Maps JavaScript API is unavailable.");
       return;
     }
-    const MapConstructor = mapsApi.Map;
-    const MarkerConstructor = mapsApi.marker?.AdvancedMarkerElement;
-    if (!MapConstructor || !MarkerConstructor) {
-      setMapError(
-        "Google Maps loaded without the marker library. Check the Maps JavaScript API configuration and reload.",
-      );
-      return;
-    }
+    const loadedMapsApi = mapsApi;
 
     let cancelled = false;
     let tilesLoaded = false;
@@ -249,96 +240,105 @@ export default function GoogleMap({
     const markers: GoogleAdvancedMarker[] = [];
     let route: GooglePolyline | null = null;
 
-    try {
-      const mapElement = mapElementRef.current;
-      if (!mapElement) {
-        return;
-      }
-
-      const map = new MapConstructor(mapElement, {
-        center: { lat: 37.7749, lng: -122.4194 },
-        zoom: 13,
-        mapId,
-        mapTypeControl: false,
-        fullscreenControl: false,
-        streetViewControl: false,
-        zoomControl: true,
-        clickableIcons: false,
-        gestureHandling: "greedy",
-      });
-
-      tileLoadListener = map.addListener("tilesloaded", () => {
-        tilesLoaded = true;
-        if (tileLoadTimeout !== null) {
-          window.clearTimeout(tileLoadTimeout);
+    async function initializeMap() {
+      try {
+        const [mapsLibrary, markerLibrary] = await Promise.all([
+          loadedMapsApi.importLibrary("maps"),
+          loadedMapsApi.importLibrary("marker"),
+        ]);
+        if (cancelled || !mapElementRef.current) {
+          return;
         }
+
+        const map = new mapsLibrary.Map(mapElementRef.current, {
+          center: { lat: 37.7749, lng: -122.4194 },
+          zoom: 13,
+          mapId,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          streetViewControl: false,
+          zoomControl: true,
+          clickableIcons: false,
+          gestureHandling: "greedy",
+        });
+
+        tileLoadListener = map.addListener("tilesloaded", () => {
+          tilesLoaded = true;
+          if (tileLoadTimeout !== null) {
+            window.clearTimeout(tileLoadTimeout);
+          }
+          if (!cancelled) {
+            setMapError(null);
+            setMapReady(true);
+          }
+        });
+        tileLoadTimeout = window.setTimeout(() => {
+          if (!cancelled && !tilesLoaded) {
+            setMapError(
+              "Google Maps loaded, but map tiles did not. Check the API key, Maps JavaScript API, billing, and allowed website referrers.",
+            );
+          }
+        }, 12000);
+
+        const bounds = new loadedMapsApi.LatLngBounds();
+        const positions: GoogleMapPoint[] = [];
+
+        vehicles.forEach((vehicle) => {
+          const position = {
+            lat: vehicle.latitude,
+            lng: vehicle.longitude,
+          };
+          const markerContent = document.createElement("div");
+          markerContent.className = `google-vehicle-marker ${vehicle.color}`;
+          markerContent.setAttribute(
+            "aria-label",
+            `${vehicle.name}, ${vehicle.id}`,
+          );
+          const markerLabel = document.createElement("span");
+          markerLabel.textContent = vehicle.id.slice(-2);
+          markerContent.appendChild(markerLabel);
+
+          const marker = new markerLibrary.AdvancedMarkerElement({
+            map,
+            position,
+            title: `${vehicle.name} · ${vehicle.id}`,
+            content: markerContent,
+            gmpClickable: true,
+            zIndex: 1,
+          });
+          marker.addEventListener("gmp-click", () =>
+            onVehicleSelect(vehicle.id),
+          );
+
+          markers.push(marker);
+          markerElementsRef.current.set(vehicle.id, markerContent);
+          positions.push(position);
+          bounds.extend(position);
+        });
+
+        if (positions.length > 1) {
+          route = new loadedMapsApi.Polyline({
+            path: positions,
+            geodesic: true,
+            strokeColor: "#4f9d79",
+            strokeOpacity: 0.8,
+            strokeWeight: 3,
+            map,
+          });
+          map.fitBounds(bounds, { top: 42, right: 42, bottom: 42, left: 42 });
+        }
+      } catch (error) {
         if (!cancelled) {
-          setMapError(null);
-          setMapReady(true);
-        }
-      });
-      tileLoadTimeout = window.setTimeout(() => {
-        if (!cancelled && !tilesLoaded) {
           setMapError(
-            "Google Maps loaded, but map tiles did not. Check the API key, Maps JavaScript API, billing, and allowed website referrers.",
+            error instanceof Error
+              ? `Google Maps could not be initialized: ${error.message}`
+              : "Google Maps could not be initialized. Check the API key and Maps JavaScript API settings.",
           );
         }
-      }, 12000);
-
-      const bounds = new mapsApi.LatLngBounds();
-      const positions: GoogleMapPoint[] = [];
-
-      vehicles.forEach((vehicle) => {
-        const position = {
-          lat: vehicle.latitude,
-          lng: vehicle.longitude,
-        };
-        const markerContent = document.createElement("div");
-        markerContent.className = `google-vehicle-marker ${vehicle.color}`;
-        markerContent.setAttribute(
-          "aria-label",
-          `${vehicle.name}, ${vehicle.id}`,
-        );
-        const markerLabel = document.createElement("span");
-        markerLabel.textContent = vehicle.id.slice(-2);
-        markerContent.appendChild(markerLabel);
-
-        const marker = new MarkerConstructor({
-          map,
-          position,
-          title: `${vehicle.name} · ${vehicle.id}`,
-          content: markerContent,
-          gmpClickable: true,
-          zIndex: 1,
-        });
-        marker.addEventListener("gmp-click", () =>
-          onVehicleSelect(vehicle.id),
-        );
-
-        markers.push(marker);
-        markerElementsRef.current.set(vehicle.id, markerContent);
-        positions.push(position);
-        bounds.extend(position);
-      })
-
-      if (positions.length > 1) {
-        route = new mapsApi.Polyline({
-          path: positions,
-          geodesic: true,
-          strokeColor: "#4f9d79",
-          strokeOpacity: 0.8,
-          strokeWeight: 3,
-          map,
-        });
-        map.fitBounds(bounds, { top: 42, right: 42, bottom: 42, left: 42 });
       }
-    } catch (error) {
-      setMapError(
-        error instanceof Error
-          ? `Google Maps could not be initialized: ${error.message}`
-          : "Google Maps could not be initialized. Check the API key and Maps JavaScript API settings.",
-      );
     }
+
+    void initializeMap();
 
     return () => {
       cancelled = true;
