@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Google Maps setup
+
+The dashboard map uses the Google Maps JavaScript API. In Google Cloud, enable the Maps JavaScript API, configure billing, and create a browser API key restricted to your development/deployment referrers and the Maps JavaScript API.
+
+Add the key to `.env.local` in the project root:
+
+```env
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+```
+
+Optionally set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` to your own map ID; the dashboard uses Google’s demo map ID when it is not set. Restart the dev server after changing environment variables. The sample vehicle locations are in San Francisco and should be replaced with live GPS positions when connecting a tracking data source.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

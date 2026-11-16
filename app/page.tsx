@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import GoogleMap from "./components/GoogleMap";
 
 type IconName =
   | "activity"
@@ -172,6 +173,8 @@ const vehicles = [
     driver: "Marcus Chen",
     initials: "MC",
     color: "mint",
+    latitude: 37.7749,
+    longitude: -122.4194,
     status: "Moving",
     speed: "42 mph",
     location: "Downtown · 8th Avenue",
@@ -183,6 +186,8 @@ const vehicles = [
     driver: "Olivia Martinez",
     initials: "OM",
     color: "blue",
+    latitude: 37.7599,
+    longitude: -122.4148,
     status: "Moving",
     speed: "28 mph",
     location: "Mission District",
@@ -194,6 +199,8 @@ const vehicles = [
     driver: "James Wilson",
     initials: "JW",
     color: "amber",
+    latitude: 37.7858,
+    longitude: -122.401,
     status: "Idle",
     speed: "0 mph",
     location: "SOMA · 3rd Street",
@@ -205,6 +212,8 @@ const vehicles = [
     driver: "Ava Thompson",
     initials: "AT",
     color: "lilac",
+    latitude: 37.8014,
+    longitude: -122.435,
     status: "Moving",
     speed: "35 mph",
     location: "Marina Boulevard",
@@ -461,77 +470,18 @@ export default function Home() {
               <div className="panel-heading map-heading">
                 <div>
                   <div className="panel-title-row">
-                    <h2>Live fleet map</h2>
-                    <span className="live-tag"><span /> LIVE</span>
+                    <h2>Fleet map</h2>
+                    <span className="live-tag"><span /> DEMO</span>
                   </div>
-                  <p>Track your vehicles in real time</p>
+                  <p>Sample vehicle positions · San Francisco</p>
                 </div>
-                <button className="map-layer-button" aria-label="Map layers">
-                  <Icon name="layers" size={17} />
-                </button>
               </div>
 
-              <div className="map-canvas" role="group" aria-label="Map showing fleet vehicles around San Francisco">
-                <div className="map-water" />
-                <div className="map-grid-lines">
-                  <span className="street street-a" />
-                  <span className="street street-b" />
-                  <span className="street street-c" />
-                  <span className="street street-d" />
-                  <span className="street street-e" />
-                  <span className="street street-f" />
-                  <span className="street street-g" />
-                  <span className="street street-h" />
-                  <span className="street street-i" />
-                  <span className="street street-j" />
-                </div>
-                <span className="map-neighborhood n-downtown">DOWNTOWN</span>
-                <span className="map-neighborhood n-soma">SOUTH OF MARKET</span>
-                <span className="map-neighborhood n-marina">RUSSIAN HILL</span>
-                <span className="map-neighborhood n-water">SAN FRANCISCO BAY</span>
-                <span className="map-road-label road-market">MARKET ST</span>
-                <span className="map-road-label road-broadway">BROADWAY</span>
-                <svg className="route-overlay" viewBox="0 0 800 360" preserveAspectRatio="none" aria-hidden="true">
-                  <path className="route-shadow" d="M118 267 C184 246 178 202 262 205 S361 251 397 183 S497 145 553 157 S638 111 703 78" />
-                  <path className="route-path" d="M118 267 C184 246 178 202 262 205 S361 251 397 183 S497 145 553 157 S638 111 703 78" />
-                </svg>
-                <button
-                  className={`map-marker marker-one ${selectedVehicle === "VH-2048" ? "selected" : ""}`}
-                  aria-label="Select Ford Transit VH-2048"
-                  onClick={() => setSelectedVehicle("VH-2048")}
-                >
-                  <Icon name="truck" size={16} />
-                </button>
-                <button
-                  className={`map-marker marker-two ${selectedVehicle === "VH-1082" ? "selected" : ""}`}
-                  aria-label="Select Mercedes Sprinter VH-1082"
-                  onClick={() => setSelectedVehicle("VH-1082")}
-                >
-                  <Icon name="truck" size={16} />
-                </button>
-                <button
-                  className={`map-marker marker-three ${selectedVehicle === "VH-3411" ? "selected" : ""}`}
-                  aria-label="Select Toyota Hilux VH-3411"
-                  onClick={() => setSelectedVehicle("VH-3411")}
-                >
-                  <Icon name="truck" size={16} />
-                </button>
-                <button
-                  className={`map-marker marker-four ${selectedVehicle === "VH-0926" ? "selected" : ""}`}
-                  aria-label="Select Ford Ranger VH-0926"
-                  onClick={() => setSelectedVehicle("VH-0926")}
-                >
-                  <Icon name="truck" size={16} />
-                </button>
-                <div className="map-zoom-controls">
-                  <button aria-label="Zoom in">+</button>
-                  <button aria-label="Zoom out">−</button>
-                </div>
-                <button className="map-center-button" aria-label="Center map on fleet">
-                  <Icon name="compass" size={17} />
-                </button>
-                <div className="map-scale">© OpenStreetMap contributors</div>
-              </div>
+              <GoogleMap
+                vehicles={vehicles}
+                selectedVehicle={selectedVehicle}
+                onVehicleSelect={setSelectedVehicle}
+              />
 
               <div className="map-footer">
                 <div className="map-legend">
